@@ -1,0 +1,15 @@
+{
+  "name": "backendseries",
+  "version": "1.0.0",
+  "description": "Backend Series in Javascript",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  }
+}
