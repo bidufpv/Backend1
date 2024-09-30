@@ -44,6 +44,7 @@ export const registerUser =  asyncHandler( async (req, res)=>{
      throw new ApiError(409,'User with same credentials already exists');
     }
          
+    console.log(req.files); 
     
 
     const avatarPath = req.files?.avatar[0]?.path;
@@ -57,9 +58,11 @@ export const registerUser =  asyncHandler( async (req, res)=>{
     }
  
     const avatar = await cloudinaryUpload(avatarPath);
+    console.log(avatar);
+    
     const coverimage = await cloudinaryUpload(coverimagePath);
 
-    if(avatar){
+    if(!avatar){
         throw new ApiError(400, "Avatar is Required!")
     }
 
