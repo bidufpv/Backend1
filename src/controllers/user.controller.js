@@ -21,7 +21,7 @@ export const registerUser =  asyncHandler( async (req, res)=>{
     // step-10 return response else error
 
     const {username, email, fullname, password} = req.body;
-    console.log(username, email, fullname, password);
+   // console.log(username, email, fullname, password);
 
     // if(username === ''){
     //     throw new ApiError(400, 'fullname is required');
@@ -44,13 +44,29 @@ export const registerUser =  asyncHandler( async (req, res)=>{
      throw new ApiError(409,'User with same credentials already exists');
     }
          
-    console.log(req.files); 
+    // console.log(req.files); 
     
 
     const avatarPath = req.files?.avatar[0]?.path;
-    const coverimagePath = req.files?.coverimage[0]?.path;
+
+    // const coverimagePath = req.files?.coverimage[0]?.path;
+
     // console.log(avatarPath);
     // console.log(coverimagePath);
+
+
+    let coverimagePath; // declaring the coverimagepath variable this will let the variable to undefined
+    if(req.files && Array.isArray(req.files.coverimage)
+    && req.files.coverimage.length > 0)
+    //This if condition check if the req.files exist or else it will return undefiend
+    //Array.isArray to check wether the req.files.coverimage is an array cuz multer stores files in an a array
+    //req.files.coverimage.length>0 just to check if we are getting atleast one file
+    {
+    coverimagePath = req.files.coverimage[0].path
+    // and with this piece of code we can get the path.
+    }
+    
+
 
     if(!avatarPath){
        throw new ApiError(400, "Avatar is Required!")
@@ -58,7 +74,7 @@ export const registerUser =  asyncHandler( async (req, res)=>{
     }
  
     const avatar = await cloudinaryUpload(avatarPath);
-    console.log(avatar);
+    //console.log(avatar);
     
     const coverimage = await cloudinaryUpload(coverimagePath);
 
@@ -69,7 +85,8 @@ export const registerUser =  asyncHandler( async (req, res)=>{
    const dbuser = await User.create({
         fullname,
         avatar: avatar.url,
-        coverimage: coverimage?.url || "",
+        // coverimage: coverimage?.url || "",
+        coverimage: coverimage.url,
         email,
         password,
         username: username.toLowerCase()
@@ -89,4 +106,6 @@ export const registerUser =  asyncHandler( async (req, res)=>{
     )
 
 });
+
+
 
