@@ -14,7 +14,7 @@ export const uploadMulter = multer({
     limits: {fileSize: 10*1024*1024},
     filefilter: function(req, file, cb){
         const fileTypes = /jpeg|jpg|png|gif|pdf/;
-        const mimetype = fileTypes.test(file.mimetype);
+        const mimetype = fileTypes.test(file.mimetype);// multipurpose internet mail extension
         const extensionNames = fileTypes.test(path.extensionNames(file.originalname).tolowercase());
         //original name is provided my multer and path comes from nodejs
 

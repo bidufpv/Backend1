@@ -4,6 +4,24 @@ import {User} from '../models/user.model.js';
 import {cloudinaryUpload} from '../utils/cloudinary.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 
+// findUserId from db
+const generateAccessandRefreshToken = async(findUserId)=>{
+    try {
+        const user = await User.findOne(findUserId)
+        const accessToken = user.generateAccessToken();
+        const refreshToken = user.generateRefreshToken();
+
+        user.refreshToken = refreshToken; // for adding refresh token to user object
+        await user.save({ validateBeforeSave: false }); //no validation before saving
+
+        return {accessToken, refreshToken}
+
+
+    } catch (error) {
+        throw new ApiError(500, 'Something went Wrong!')
+    }
+}
+
 export const registerUser =  asyncHandler( async (req, res)=>{
     // return res.status(200).json({
     //     message: 'Ok'
@@ -108,4 +126,59 @@ export const registerUser =  asyncHandler( async (req, res)=>{
 });
 
 
+export const loginUser = asyncHandler( async(req, res)=>{
+    // Get all the data from req.body
+    //check for user either from username or eail
+    // find user from the database
+    //check password
+    //check accessand refresh token
+    //send cookie / confirmation
 
+    const {email, username, password} = req.body
+     if (!username || email) {
+        throw new ApiError(400, 'Username or email is required!')
+
+     }
+    
+     //findUser is the variable name for finding the user from db
+     const findUser = await User.findOne({
+        $or: [{username}, {email}]
+     });
+
+     if(!findUser){
+        throw new ApiError(404, "User not found!")
+     }
+
+     const isPasswordValid = await findUser.isPasswordCorrect(password)
+     if (!isPasswordValid){
+        throw new ApiError(401, "Invalid password!")
+     }
+
+
+    const {accessToken, refreshToken} =  await generateAccessandRefreshToken(findUser._id)
+
+    const loggedInUser = await User.findById(findUser._id).select(
+        "-password -refreshToken"
+
+    )
+    // only server side can change this
+    const options = {
+        httpOnly: true,
+        secure: true
+    };
+
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+     .json(
+        //refer apiresponse.js
+        new ApiResponse(200, //statuscode
+            // data field in the curly braces
+            {
+                user: loggedInUser, accessToken, refreshToken
+            },
+            "User Logged in succesfully"
+        )
+     )
+})
