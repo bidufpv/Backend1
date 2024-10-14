@@ -1,6 +1,7 @@
 import multer from "multer";
 import path from 'path';
 
+//multer middleware
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, './public/temp')
@@ -9,6 +10,7 @@ const storage = multer.diskStorage({
         cb(null, file.originalname)
         console.log(file);
     }});
+
 export const uploadMulter = multer({
     storage,
     limits: {fileSize: 10*1024*1024},

@@ -4,24 +4,9 @@ import {User} from '../models/user.model.js';
 import {cloudinaryUpload} from '../utils/cloudinary.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 
-// findUserId from db
-const generateAccessandRefreshToken = async(findUserId)=>{
-    try {
-        const user = await User.findOne(findUserId)
-        const accessToken = user.generateAccessToken();
-        const refreshToken = user.generateRefreshToken();
-
-        user.refreshToken = refreshToken; // for adding refresh token to user object
-        await user.save({ validateBeforeSave: false }); //no validation before saving
-
-        return {accessToken, refreshToken}
 
 
-    } catch (error) {
-        throw new ApiError(500, 'Something went Wrong!')
-    }
-}
-
+// for registering user
 export const registerUser =  asyncHandler( async (req, res)=>{
     // return res.status(200).json({
     //     message: 'Ok'
@@ -125,7 +110,26 @@ export const registerUser =  asyncHandler( async (req, res)=>{
 
 });
 
+// findUserId from db
+const generateAccessandRefreshToken = async(findUserId)=>{
+    try {
+        const user = await User.findOne(findUserId)
+        const accessToken = user.generateAccessToken();
+        const refreshToken = user.generateRefreshToken();
 
+        user.refreshToken = refreshToken; // for adding refresh token to user object
+        await user.save({ validateBeforeSave: false }); //no validation before saving
+
+        return {accessToken, refreshToken}
+
+
+    } catch (error) {
+        throw new ApiError(500, 'Something went Wrong!')
+    }
+}
+
+
+// for loginuser
 export const loginUser = asyncHandler( async(req, res)=>{
     // Get all the data from req.body
     //check for user either from username or eail
@@ -181,4 +185,32 @@ export const loginUser = asyncHandler( async(req, res)=>{
             "User Logged in succesfully"
         )
      )
+})
+
+//for logout user
+export const logoutUser = asyncHandler(async(req, res) => {
+          
+   await User.findByIdAndUpdate(
+        req.user._id, { //req.user._id for finding the user
+            $set: {     //$set mongo operator for updating fields takes object
+                refreshToken: undefined
+            }
+        },
+        {
+            new: true
+        }
+
+    )
+
+    const options = {
+        httpOnly: true,
+        secure: true   
+    }
+
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)// clearCookie is coming from cookiesparser
+    .clearCookie("refreshToken", options)// clearCookie is coming from cookiesparser
+    .json(new ApiResponse(200, {}, "User LoggedOut succesfully"))
+
 })
