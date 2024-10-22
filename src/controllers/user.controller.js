@@ -3,6 +3,7 @@ import {ApiError} from '../utils/apiError.js';
 import {User} from '../models/user.model.js';
 import {cloudinaryUpload} from '../utils/cloudinary.js';
 import { ApiResponse } from '../utils/apiResponse.js';
+import jwt from 'jsonwebtoken';
 
 
 
@@ -112,7 +113,7 @@ export const registerUser =  asyncHandler( async (req, res)=>{
 
 });
 
-// findUserId from db
+// findUserId from db for finidng userId from database.
 const generateAccessandRefreshToken = async(findUserId)=>{
     try {
         const user = await User.findOne(findUserId)
@@ -131,7 +132,7 @@ const generateAccessandRefreshToken = async(findUserId)=>{
 }
 
 
-// for loginuser
+// for login user
 export const loginUser = asyncHandler( async(req, res)=>{
     // Get all the data from req.body
     //check for user either from username or eail
@@ -218,3 +219,47 @@ export const logoutUser = asyncHandler(async(req, res) => {
     
 
 })
+
+// code snippet for refreshing the acccess token from db
+export const accessRefreshToken = asyncHandler(async(req, res, next)=>{
+    
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+
+   try {
+     if(!incomingRefreshToken){
+         throw new ApiError(401, "Uauthorized Access!")
+     }
+ 
+   const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+  
+   const user = await User.findById(decodedToken?._id)
+   if(!user){
+     throw new ApiError(401, "Invalid Refresh Token")
+   };
+ 
+   //for checking if the user's incomin refreshtoken is same as the db refreshtoken
+   if(incomingRefreshToken !== user?.refreshToken){
+     throw new ApiError(401, "Refresh Token Unmatched!")
+   }
+ 
+   const options ={
+     httpOnly: true,
+     secure: true
+   }
+   const {accessToken, newrefreshToken} = await generateAccessandRefreshToken(user._id)
+    
+   return res
+   .status(200)
+   .cookie("accessToken", accessToken, options)
+   .cookie("refreshToken", newrefreshToken, options)
+   .json(
+     new ApiResponse(200,
+         {accessToken, refreshToken: newrefreshToken},
+         "Access Token refreshed"
+     )
+   )
+   } catch (error) {
+    throw new ApiError(401, error?.message || "Invalid RefreshToken")
+   }
+}
+)
