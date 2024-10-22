@@ -52,6 +52,16 @@ export const registerUser =  asyncHandler( async (req, res)=>{
 
     const avatarPath = req.files?.avatar[0]?.path;
 
+    if(!avatarPath){
+       throw new ApiError(400, "Avatar is Required!")
+    
+    }
+    
+    const avatar = await cloudinaryUpload(avatarPath);
+    if(!avatar){
+        throw new ApiError(400, "Avatar is Required!")
+    }
+    //console.log(avatar);
     // const coverimagePath = req.files?.coverimage[0]?.path;
 
     // console.log(avatarPath);
@@ -68,22 +78,14 @@ export const registerUser =  asyncHandler( async (req, res)=>{
     coverimagePath = req.files.coverimage[0].path
     // and with this piece of code we can get the path.
     }
-    
-
-
-    if(!avatarPath){
-       throw new ApiError(400, "Avatar is Required!")
-
-    }
- 
-    const avatar = await cloudinaryUpload(avatarPath);
-    //console.log(avatar);
+    console.log('coverimagepatherror' , coverimagePath);
     
     const coverimage = await cloudinaryUpload(coverimagePath);
+    console.log('coverimageerror', coverimage);
+    
 
-    if(!avatar){
-        throw new ApiError(400, "Avatar is Required!")
-    }
+    
+    
 
    const dbuser = await User.create({
         fullname,
@@ -139,7 +141,8 @@ export const loginUser = asyncHandler( async(req, res)=>{
     //send cookie / confirmation
 
     const {email, username, password} = req.body
-     if (!username || email) {
+
+     if (!(username || email)) {
         throw new ApiError(400, 'Username or email is required!')
 
      }
@@ -212,5 +215,6 @@ export const logoutUser = asyncHandler(async(req, res) => {
     .clearCookie("accessToken", options)// clearCookie is coming from cookiesparser
     .clearCookie("refreshToken", options)// clearCookie is coming from cookiesparser
     .json(new ApiResponse(200, {}, "User LoggedOut succesfully"))
+    
 
 })
