@@ -4,6 +4,7 @@ import {User} from '../models/user.model.js';
 import {cloudinaryUpload} from '../utils/cloudinary.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import jwt from 'jsonwebtoken';
+// import { User } from '../models/user.model.js';
 
 
 
@@ -225,10 +226,12 @@ export const accessRefreshToken = asyncHandler(async(req, res, next)=>{
     
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
-   try {
+   
      if(!incomingRefreshToken){
          throw new ApiError(401, "Uauthorized Access!")
      }
+
+     try {
  
    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
   
@@ -262,4 +265,142 @@ export const accessRefreshToken = asyncHandler(async(req, res, next)=>{
     throw new ApiError(401, error?.message || "Invalid RefreshToken")
    }
 }
-)
+);
+
+
+//for changing password / setting a new password
+export const changeCurrentPassword = asyncHandler(async (req, res) => {
+   
+    console.log("Request Body:", req.body);
+    console.log("User ID:", req.user?.id);
+
+    const { oldPassword, newPassword, verifyPassword } = req.body;
+
+    console.log(oldPassword, newPassword, verifyPassword);
+
+    // Use `User` to fetch user and assign it to a variable `currentUser`
+    const currentUser = await User.findById(req.user?._id);
+    console.log(currentUser);
+
+    if (!currentUser) {
+        throw new ApiError(404, "User not found");
+    }
+
+    const isPasswordCorrect = await currentUser.isPasswordCorrect(oldPassword);
+
+    if (!isPasswordCorrect) {
+        throw new ApiError(400, "Given Password is Invalid!");
+    }
+
+    if (newPassword !== verifyPassword) {
+        throw new ApiError(400, "New Passwords do not match!");
+    }
+
+    currentUser.password = newPassword;
+    await currentUser.save({ validateBeforeSave: false }); //validatebeforsave will not validate the password once again
+
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Password changed successfully!"));
+});
+
+
+export const getCurrentUser = asyncHandler(async(req, res)=>{
+    return res
+    .status(200)
+    .json(200, req.user, "current user fetched succesfully")
+})
+
+
+//for updating account details
+export const updateAccountDetails = asyncHandler(async(req, res)=>{
+    const {email, fullName} = req.body;
+
+    if(!email || !fullName){
+        throw new ApiError(400,"email and fullName are mandatory!")
+    }
+
+    const user = User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                fullName,
+                email
+            }
+        },
+        {new: true} // returns value after updation
+    ).select("-password")
+})
+
+
+//for updating avatar 
+export const updateAvatar= asyncHandler(async(req,res)=>{
+
+ const AvatarPath = req.file?._id;
+
+ if(!AvatarPath){
+    throw new ApiError(400, "AvatarPath missing!")
+ };
+
+ const avatar = await cloudinaryUpload(AvatarPath);
+
+ if(!avatar.url){
+    throw new ApiError(400,"Error in uploading Avatar")
+
+ }
+
+ const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+        $set:{
+            avatar: avatar.url
+        }
+
+    },
+    {
+       new: true
+    }
+ ).select("-password")
+
+
+ return res
+ .status(200)
+ .json(
+    new ApiResponse(200,"Avatar updated succesfully")
+ )
+
+})
+
+//for updating coverImage
+export const updateCoverImage = asyncHandler(async(req,res)=>{
+    
+    const coverImagePath = req.file?._id;
+    
+    if(!coverImagePath){
+        throw new ApiError(400, "cover image not found!")
+    }
+
+    const coverImage = await cloudinaryUpload(coverImagePath);
+
+    if(!coverImage.url){
+        throw new ApiError(400,"Error in uploading cover image!")
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                coverImage: coverImage.url // for cloudinary url
+            }
+        },
+        {new:true}
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(
+       new ApiResponse(200,"Cover Image updated succesfully")
+    )
+
+})
