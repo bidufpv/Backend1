@@ -8,7 +8,7 @@ import jwt from 'jsonwebtoken';
 
 
 
-// for registering user
+// for registering a user
 export const registerUser =  asyncHandler( async (req, res)=>{
     // return res.status(200).json({
     //     message: 'Ok'
@@ -370,6 +370,8 @@ export const updateAvatar= asyncHandler(async(req,res)=>{
     new ApiResponse(200,"Avatar updated succesfully")
  )
 
+ 
+
 })
 
 //for updating coverImage
@@ -404,3 +406,103 @@ export const updateCoverImage = asyncHandler(async(req,res)=>{
     )
 
 })
+
+
+//mongodb aggregation pipeline implementation
+
+export const getuserChannelProfile = asyncHandler(async(req,res)=>{
+
+    const {username} = req.params // finding the username through link thatswhy params
+    console.log(username);
+
+    //optionally checking if username is present with trimming the white spaces
+    if(!username?.trim()){
+        throw new ApiError(400, "User Name is Missing!")
+
+    }
+    
+    
+    //writing pipeline
+    const channel = await User.aggregate([
+
+        //1st pipeline
+        {
+         //$match for matching username.
+            $match:{
+                username: username?.toLowerCase()
+            }
+        },
+        
+        //2nd pipeline
+        //lookup used for joining 
+        //to count how many subscribers it has through channel
+            {
+                $lookup:{
+                    from: "subscriptions",
+                    localField: "_id",
+                    foreignField: "channel",
+                    as: "Subscribers"
+                }
+            },
+       
+        //3rd pipeline  
+        //to count how many channel you have subscribed using subscriber count
+            {
+                $lookup:{
+                    from: "subscriptions",
+                    localField: "_id",
+                    foreignField: "subscriber",
+                    as: "SubscribedTO"
+                }
+            },
+
+        //4th pipeline
+        //$addFields add more fields to the exsisting model
+        // added some values to the original user model field
+            {
+                $addFields:{
+                    //to count how many subscriber does the channel have
+                    subscribersCount:{
+                        $size: "$Subscribers"
+                    },
+                    //to count how many channels the channel had subscribed
+                    channelSubscribedToCount:{
+                        $size: "$SubscribedTo"
+                    },
+                    
+
+                    //validation to check if the user is subscribed or not subscribed
+                    issubscribed:{
+                        $cond:{ //$cond operator used for condition expression
+                            //$in operator can calculate in arrays as well as in objects
+                            if:{$in: [req.user?._id, "$Subscribers.subscriber"]},
+                            then:true,
+                            else:false
+                        }
+                    }
+                }
+            },
+
+            //5th pipeline
+            //$project is used for projecting all the data, so that frontend devs can pick it up
+            {
+                $project:{
+                    fullName: 1,
+                    username: 1,
+                    subscribersCount: 1,
+                    channelSubscribedToCount:1,
+                    issubscribed:1,
+                    avatar:1,
+                    coverImage:1,
+                    email:1
+
+                }
+            }
+
+
+        ])
+
+        console.log(channel);
+
+});
+
