@@ -504,5 +504,16 @@ export const getuserChannelProfile = asyncHandler(async(req,res)=>{
 
         console.log(channel);
 
+        //logic for checking if we have got an array as response from channel
+        if(!channel?.length){
+           throw new ApiError(404, "Channel doesnt exist")
+        }
+
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(200, "User data fetched successfully")
+        )
+
 });
 
