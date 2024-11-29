@@ -4,6 +4,7 @@ import {User} from '../models/user.model.js';
 import {cloudinaryUpload} from '../utils/cloudinary.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 // import { User } from '../models/user.model.js';
 
 
@@ -514,6 +515,67 @@ export const getuserChannelProfile = asyncHandler(async(req,res)=>{
         .json(
             new ApiResponse(200, "User data fetched successfully")
         )
+
+});
+
+
+export const getWatchHistory = asyncHandler(async(req, res)=>{
+    
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.ObjectId(req.user._id)
+// req.user._id is a string, we need to convert it to an ObjectId to 
+//match the format of the _id field in the database.
+            }
+            
+        },
+        {
+            $lookup:{
+                from:"videos",
+                localField:"watchHistory",
+                foreignField:"_id",
+                as:"watchHistory",
+                //subpipeline
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField:"owner",
+                            foreignField:"_id",
+                            as:"owner",
+                            pipeline:[
+                                {
+                                    $project:{
+                                        fullName: 1,
+                                        username:1,
+                                        avatar:1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields:{
+                            owner:{
+                                $first: "$owner"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, 
+            user[0].watchHistory,
+            "Watch History fetched succesfully"
+        )
+    )
 
 });
 
